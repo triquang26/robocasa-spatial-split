@@ -81,3 +81,36 @@ attributes; `<file>.log.json` lists every attempt and why it failed. The egoview
 image follows the waist. `tools/rerender_demos.py --task <Task> --needed 1100` replays stored demos, rewrites state and
 frames, and moves the frames to an mp4 next to the file, which makes the folder about 5 times smaller; workers on
 several machines can share one folder. `tools/export_lerobot.py` reads both forms.
+
+
+## Eval results
+
+`bench.py` writes `results_<i>of<n>.jsonl` and `summary.json` with success rates per split, level, dimension,
+sub-factor and task. A medium or hard item counts toward every dimension and sub-factor it combines.
+
+## Rendering
+
+`env.sh` leaves `CUDA_VISIBLE_DEVICES` unset because robosuite rejects an EGL device that is not listed there; pick
+the GPU with `EGL_DEV`.
+
+## Files
+
+| file | content |
+|---|---|
+| `spatialcasa/task.py` | the 12 GR1 tasks; `configs/assets.yaml` holds their models and scales |
+| `spatialcasa/world.py` | one RoboCasa env with every object: placement, settle, state, render, visibility |
+| `spatialcasa/relations.py` | spatial relations |
+| `spatialcasa/scene.py`, `operators.py` | base scene sampler and the eight sub-factors |
+| `spatialcasa/recipes.py` | eval level plans: which sub-factors each item combines |
+| `spatialcasa/gen.py` | scene CLI: json, previews, contact sheets |
+| `spatialcasa/ik.py`, `reach.py` | waist plus arm IK and the reach map `configs/reach_gr1.json` |
+| `spatialcasa/demo.py`, `demos.py` | planner, recorder, scorer, replay, and the sharded demo CLI |
+| `spatialcasa/run.py`, `split.py` | per-task driver and split definitions |
+| `spatialcasa/obs.py` | GR00T observation: padded egoview image and the five joint-position parts |
+| `spatialcasa/bench.py` | eval harness |
+| `tools/export_eval.py`, `export_lerobot.py` | release export: eval index and scenes, one LeRobot v2.0 dataset per task |
+| `tools/merge_train.py` | keeps a released train dataset, adds top-up demos and picks 200 clean and 100 per sub-factor per task |
+| `tools/rerender_demos.py` | replay demos and store frames as mp4 |
+| `tools/preview_levels.py`, `make_video.py`, `make_demo_video.py` | images and videos of scenes per level |
+| `tools/probe_cells.py`, `probe_task.py`, `grasp_test.py` | diagnostics: cells, object stability, grasp success |
+| `configs/levels.yaml`, `pools.yaml` | level values; style, clutter and wording pools |
