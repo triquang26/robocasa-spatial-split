@@ -1,12 +1,58 @@
 # SpatialCasa: SpatialLIBERO on RoboCasa GR1
 
 This repo builds and runs SpatialCasa-GR1, a spatial-language pick-and-place benchmark for the Fourier GR1 humanoid
-(`GR1ArmsAndWaistFourierHands`) on the RoboCasa tabletop. Each scene has three identical cans and three containers,
-and the instruction names one can by a reference relation and a place by a goal relation, for example "pick up the
-can to the left of the pan and place it to the right of the pan".
+(`GR1ArmsAndWaistFourierHands`) on the RoboCasa tabletop, simulated in MuJoCo. Each scene has three identical cans and
+three containers, and the instruction names one can by a reference relation and a place by a goal relation, for
+example "pick up the can to the left of the pan and place it to the right of the pan".
 
 The released data is on Hugging Face at `twanghcmut/SpatialCasa-GR1`. Its card describes the file formats, the
-observation and action spec and the GR00T fine-tuning command.
+observation and action spec and the GR00T fine-tuning command. The design details (sub-factors, splits, eval levels,
+file formats) are in [docs/benchmark.md](docs/benchmark.md).
+
+## How the pipeline fits together
+
+```
+configs/assets.yaml ──► task.py, assets.py      which objects a task uses (mesh, scale, grasp)
+                            │
+                            ▼
+                        world.py                one RoboCasa env holding every object: place, settle, render
+                            │
+                            ▼
+                        scene.py                base scene: anchors, target can, two distractor cans, checks
+                            │
+                            ▼
+configs/levels.yaml ──► operators.py            the 8 sub-factors that edit a base scene (clutter, flip, ...)
+configs/pools.yaml          │
+                            ▼
+                        recipes.py              which sub-factors each eval item combines
+                            │
+                            ▼
+                        demo.py, demos.py       scripted planner (IK + reach map) records and replays demos
+                            │
+                            ▼
+                        run.py, split.py        per-task driver over cells, seeds and GPUs
+                            │
+                            ▼
+                        tools/export_*.py       release: eval index and scenes, LeRobot datasets
+                        bench.py                evaluates a policy on the released eval scenes
+```
+
+All of these files are in `spatialcasa/` unless a path says otherwise.
+
+## Where to change things
+
+| to change | edit | then check with |
+|---|---|---|
+| an object's mesh or size | `configs/assets.yaml`: `mjcf` points at a RoboCasa asset, `scale` resizes it; the can keeps `fixed_scale` because the grasp is tuned to it | `tools/probe_task.py --task <Task>` (object stands still), `tools/grasp_test.py --task <Task>` (planner can grasp) |
+| which objects a task uses | the task entry in `configs/assets.yaml`; task names are listed in `spatialcasa/task.py` | `tools/preview_levels.py --task <Task>` |
+| obstacles (clutter) | object types in `configs/pools.yaml` (`clutter`), counts per level in `configs/levels.yaml`, placement in `clutter()` in `spatialcasa/operators.py` | `tools/preview_levels.py` |
+| a new kind of scene edit | add an operator in `spatialcasa/operators.py` next to the existing eight and register it in `OPS` and `DIMENSION` | `tools/preview_levels.py` |
+| what counts as a valid scene | `check_labels`, `check_physics`, `check_visibility` in `spatialcasa/scene.py` | `tools/probe_cells.py --task <Task>` |
+| the grasp or planner | `spatialcasa/demo.py`; rerun `python -m spatialcasa.reach` afterwards | `tools/grasp_test.py` |
+
+Clutter objects are never a can or an anchor, are kept off the robot's path, and leave the task objects at least
+70 % visible. The planner drops any path that touches another object, so larger objects or more obstacles lower the
+share of scenes it can solve.
 
 ## Setup
 
@@ -69,76 +115,8 @@ python -c "from gr00t.data.stats import main; from gr00t.data.embodiment_tags im
 main('out/SpatialCasa-GR1/train/gr1_spatial.PlateToPan', EmbodimentTag.ROBOCASA_GR1_TABLETOP)"
 ```
 
-`spatialcasa.run` handles one task at a time. It probes the 40 cells once (`tools/probe_cells.py`, saved in
-`--probe`) and builds the scenes. For train it records demos and adds layouts until the task has `--target-demos`
-kept demos, then writes `<out>/<task>/demos/summary.json`. For eval it fills 15 slots per task (5 cells x 3 levels).
-Before building, the driver plans the 8 recipes of every slot and writes them to `scenes/plans.json`. It then draws
-base scenes for each slot in a fixed seed order, builds exactly the planned recipes on each and runs the scripted
-planner. A slot is done once every planned recipe is solvable on some base scene, or after `--spares` base scenes.
-The default is 25; the release used 100, with `--spares-per-round` to build several at once.
-
-`tools/export_eval.py` takes the base scene that solves the most recipes and fills the rest with the same recipes
-from the spare base scenes, as in the SpatialLIBERO fallback scenes. The oracle results are in `oracle/summary.json`.
-
-Workers split the scene list, skip finished files and start one per CPU core over the listed GPUs (about 1.4 GB of
-GPU memory each), so a stopped run resumes with the same command. `--gpus` with no ids runs on CPU with OSMesa.
-
-`spatialcasa/split.py` fixes the cells and seeds of every split. In each task 30 of the 40 cells pass the probe:
-20 train cells and 10 novel cells.
-
-| split | cells | layout seeds | items per layout | styles |
-|---|---|---|---|---|
-| `train` | the 20 train cells | from 0 | base + 8 sub-factors at level `train` | 0 to 5 |
-| `eval_seen` | 5 train cells per task, rotated over tasks | from 1000 | 8 items of one level (below) | 6 to 11 |
-| `eval_novel` | 5 novel cells per task, rotated over tasks | from 2000 | same as `eval_seen` | 6 to 11 |
-
-Each eval cell gets one base scene per level, so the three levels never share a base scene, and each task has
-5 x 3 x 8 = 120 episodes per split. The levels follow the SpatialLIBERO protocol:
-
-| level | 8 items of a base scene |
-|---|---|
-| easy | each sub-factor alone at its easy value |
-| medium | 4 sub-factors alone at the medium value, and 4 pairs at easy values that use each of the 8 sub-factors exactly once; the singles alternate between consecutive scenes |
-| hard | 8 distinct recipes at hard values, five of 4 sub-factors and three of 5; each sub-factor in 4 or 5 of them, each dimension in at least 4, and at least 4 with a geometric sub-factor (`anchor_move`, `extra_can`, `flip`) |
-
-`gap_near` and `gap_far` are never combined with each other, with `flip` or with `anchor_move`, and `flip` is never
-combined with `anchor_move`. Sub-factors in a recipe are applied
-in a fixed order (gap, anchor move, extra cans, flip, synonym, clutter, background). The hard plan of a split's 5
-cells is solved as in SpatialLIBERO's `plan_hard` (sub_factor balance): an integer program over the admissible
-compositions picks the tightest per-sub-factor usage window, and prefers compositions the other cells of the split
-use least (`spatialcasa/recipes.py`).
-
-A demo file `out/train/<task>/demos/<cell>_s<k>.hdf5` holds one group per kept demo with `obs/egoview`
-(T x 256 x 256 x 3), `obs/state` and `actions` (T x 29), `obs/qpos`, and the instruction, target, objects and score as
-attributes; `<file>.log.json` lists every attempt and why it failed. The egoview camera is mounted on the head, so the
-image follows the waist. `tools/rerender_demos.py --task <Task> --needed 1100` replays stored demos, rewrites state and
-frames, and moves the frames to an mp4 next to the file, which makes the folder about 5 times smaller; workers on
-several machines can share one folder. `tools/export_lerobot.py` reads both forms.
-
-## How a scene is built
-
-The sampler places the anchors, puts the target can in a gap bin on the correct side of its anchor, and puts the
-other two cans anywhere reachable and in view. Before and after a 300 step settle it checks that footprints are at
-least 7 mm apart, every can is in the reach map and fully in the egoview, exactly one can satisfies the reference,
-the goal is false at the start and a reachable place point exists. After the settle it also requires drift of at
-most 5 mm, tilt of at most 5 degrees and at least 200 visible pixels per can.
-
-| dimension | sub-factor | what changes |
-|---|---|---|
-| VSR | `background` | counter, wall and floor style; light level |
-| VSR | `clutter` | unnamed objects kept off the robot's path; task objects keep 70 % of their visibility |
-| SSU | `synonym` | reference, goal and verb wording from pool A (train, easy) or B (medium, hard) |
-| SSU | `flip` | edited instruction (relation swap, inversion, anchor or goal change) whose answer is another can |
-| OCD | `gap_near`, `gap_far` | target moved into the level's gap bin; for `between`, the anchors move apart |
-| SCR | `extra_can` | one or two more identical cans that satisfy the reference with no anchor |
-| SCR | `anchor_move` | the reference anchor moves so another can becomes the answer |
-
-When a base scene has no valid gap or anchor-move item, that item draws its own base scene.
-
-The planner grasps with one hand from the side, searches nine wrist spins for the pick and the place, drops any path
-that touches another object, and uses the waist. A demo is kept when the success rule holds and a replay of the
-recorded actions passes it too. Simulation steps through `World.step`, which matches `env.step` exactly and is about
-1.6 times faster.
+How the driver plans recipes, uses spare base scenes and resumes is described under "Data driver" in
+[docs/benchmark.md](docs/benchmark.md).
 
 ## Files
 
@@ -158,5 +136,6 @@ recorded actions passes it too. Simulation steps through `World.step`, which mat
 | `tools/export_eval.py`, `export_lerobot.py` | release export: eval index and scenes, one LeRobot v2.0 dataset per task |
 | `tools/merge_train.py` | keeps a released train dataset, adds top-up demos and picks 200 clean and 100 per sub-factor per task |
 | `tools/rerender_demos.py` | replay demos and store frames as mp4 |
+| `tools/preview_levels.py`, `make_video.py`, `make_demo_video.py` | images and videos of scenes per level |
 | `tools/probe_cells.py`, `probe_task.py`, `grasp_test.py` | diagnostics: cells, object stability, grasp success |
 | `configs/levels.yaml`, `pools.yaml` | level values; style, clutter and wording pools |
