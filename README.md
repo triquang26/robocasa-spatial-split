@@ -1,13 +1,12 @@
 # SpatialCasa: SpatialLIBERO on RoboCasa GR1
 
-This folder builds and runs SpatialCasa-GR1, a spatial-language pick-and-place benchmark for the Fourier GR1 humanoid
+This repo builds and runs SpatialCasa-GR1, a spatial-language pick-and-place benchmark for the Fourier GR1 humanoid
 (`GR1ArmsAndWaistFourierHands`) on the RoboCasa tabletop. Each scene has three identical cans and three containers,
 and the instruction names one can by a reference relation and a place by a goal relation, for example "pick up the
 can to the left of the pan and place it to the right of the pan".
 
 The released data is on Hugging Face at `twanghcmut/SpatialCasa-GR1`. Its card describes the file formats, the
-observation and action spec and the GR00T fine-tuning command. This README covers setup, evaluation and rebuilding
-the data.
+observation and action spec and the GR00T fine-tuning command.
 
 ## Setup
 
@@ -20,8 +19,9 @@ python robocasa-gr1/robocasa/scripts/download_kitchen_assets.py
 source env.sh                                       # headless EGL; EGL_DEV=n picks the GPU
 ```
 
-`env.sh` points EGL at the NVIDIA GL libraries in `../nvidia-gl-<driver>` next to this repo (set `NVGL` to use another folder) and leaves `CUDA_VISIBLE_DEVICES`
-unset, because robosuite rejects an EGL device that is not listed there.
+`env.sh` points EGL at the NVIDIA GL libraries in `../nvidia-gl-<driver>`, next to this repo (set `NVGL` to use
+another folder). It leaves `CUDA_VISIBLE_DEVICES` unset because robosuite rejects an EGL device that is not listed
+there.
 
 ## Evaluate a policy
 
@@ -74,12 +74,14 @@ main('out/SpatialCasa-GR1/train/gr1_spatial.PlateToPan', EmbodimentTag.ROBOCASA_
 kept demos, then writes `<out>/<task>/demos/summary.json`. For eval it fills 15 slots per task (5 cells x 3 levels).
 Before building, the driver plans the 8 recipes of every slot and writes them to `scenes/plans.json`. It then draws
 base scenes for each slot in a fixed seed order, builds exactly the planned recipes on each and runs the scripted
-planner. A slot is done once every planned recipe is solvable on some base scene, or after `--spares` base scenes
-(25 by default; the release used 100, with `--spares-per-round` to build several at once). A recipe is never
-swapped for another one. `tools/export_eval.py` takes the base scene that solves the most recipes and fills the rest
-with the same recipes from the spare base scenes, as in the SpatialLIBERO fallback scenes. The result is in `oracle/summary.json`. Workers split the scene list, skip finished
-files and start one per CPU core over the listed GPUs (about 1.4 GB of GPU memory each), so a stopped run resumes with
-the same command. `--gpus` with no ids runs on CPU with OSMesa.
+planner. A slot is done once every planned recipe is solvable on some base scene, or after `--spares` base scenes.
+The default is 25; the release used 100, with `--spares-per-round` to build several at once.
+
+`tools/export_eval.py` takes the base scene that solves the most recipes and fills the rest with the same recipes
+from the spare base scenes, as in the SpatialLIBERO fallback scenes. The oracle results are in `oracle/summary.json`.
+
+Workers split the scene list, skip finished files and start one per CPU core over the listed GPUs (about 1.4 GB of
+GPU memory each), so a stopped run resumes with the same command. `--gpus` with no ids runs on CPU with OSMesa.
 
 `spatialcasa/split.py` fixes the cells and seeds of every split. In each task 30 of the 40 cells pass the probe:
 20 train cells and 10 novel cells.
@@ -99,7 +101,8 @@ Each eval cell gets one base scene per level, so the three levels never share a 
 | medium | 4 sub-factors alone at the medium value, and 4 pairs at easy values that use each of the 8 sub-factors exactly once; the singles alternate between consecutive scenes |
 | hard | 8 distinct recipes at hard values, five of 4 sub-factors and three of 5; each sub-factor in 4 or 5 of them, each dimension in at least 4, and at least 4 with a geometric sub-factor (`anchor_move`, `extra_can`, `flip`) |
 
-`gap_near` and `gap_far` are never combined, nor are `flip` and `anchor_move`. Sub-factors in a recipe are applied
+`gap_near` and `gap_far` are never combined with each other, with `flip` or with `anchor_move`, and `flip` is never
+combined with `anchor_move`. Sub-factors in a recipe are applied
 in a fixed order (gap, anchor move, extra cans, flip, synonym, clutter, background). The hard plan of a split's 5
 cells is solved as in SpatialLIBERO's `plan_hard` (sub_factor balance): an integer program over the admissible
 compositions picks the tightest per-sub-factor usage window, and prefers compositions the other cells of the split
