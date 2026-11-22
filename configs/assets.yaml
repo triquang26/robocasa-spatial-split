@@ -1,0 +1,102 @@
+can:
+  candidate:
+    noun: can
+    id: can
+    nouns: {A: [can], B: [can, soda can]}
+    mjcf: objaverse/can/can_0/model.xml
+    scale: 1.0
+    grasp: side
+  anchors:
+    plate: {noun: plate, mjcf: objaverse/plate/plate_11/model.xml, scale: 0.72, goal_word: "on"}
+    bowl: {noun: bowl, mjcf: objaverse/bowl/bowl_13/model.xml, scale: 0.6, goal_word: "in"}
+    board: {noun: cutting board, mjcf: objaverse/cutting_board/cutting_board_4/model.xml, scale: 0.6, goal_word: "on", yaw: quarter}
+
+gr1_scale: 0.6
+
+_parts:
+  can_c: &can_c {noun: can, id: can, nouns: {A: [can], B: [can, soda can]}, mjcf: objaverse/can/can_0/model.xml, scale: 1.0, grasp: side, fixed_scale: true}
+  plate_s: &plate_s {noun: plate, mjcf: objaverse/plate/plate_4/model.xml, scale: 1.0, goal_word: "on"}
+  dish: &dish {noun: dish, mjcf: objaverse/plate/plate_4/model.xml, scale: 1.0, goal_word: "on"}
+  board_s: &board_s {noun: cutting board, mjcf: objaverse/cutting_board/cutting_board_0/model.xml, scale: 1.0, goal_word: "on", yaw: quarter}
+  tray_s: &tray_s {noun: tray, mjcf: objaverse/tray/tray_2/model.xml, scale: 1.0, goal_word: "on", yaw: quarter}
+  mat_s: &mat_s {noun: placemat, mjcf: lightwheel/placemat/Placemat002/model.xml, scale: 1.0, goal_word: "on", yaw: quarter}
+  bowl: &bowl {noun: bowl, mjcf: objaverse/bowl/bowl_15/model.xml, scale: 1.0, goal_word: "in"}
+  pan: &pan {noun: pan, mjcf: objaverse/pan/pan_4/model.xml, scale: 1.0, goal_word: "in", yaw: quarter}
+  pot: &pot {noun: pot, mjcf: lightwheel/pot/Pot066/model.xml, scale: 1.0, goal_word: "in", yaw: quarter}
+  box: &box {noun: cardboard box, mjcf: lightwheel/cardboard_box/CardboardBox053/model.xml, scale: 1.0, goal_word: "in", yaw: quarter}
+  plate_t: &plate_t {noun: plate, mjcf: objaverse/plate/plate_10/model.xml, scale: 1.0, goal_word: "on"}
+  board_x: &board_x {noun: cutting board, mjcf: objaverse/cutting_board/cutting_board_4/model.xml, scale: 1.0, goal_word: "on", yaw: quarter}
+  bowl_x: &bowl_x {noun: bowl, mjcf: objaverse/bowl/bowl_13/model.xml, scale: 1.0, goal_word: "in"}
+
+CuttingboardToPan:
+  source: gr1_unified/PosttrainPnPNovelFromCuttingboardToPanSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: pan
+  from: board
+  anchors: {pan: *pan, board: *board_s, bowl: *bowl_x}
+CuttingboardToPot:
+  source: gr1_unified/PosttrainPnPNovelFromCuttingboardToPotSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: pot
+  from: board
+  anchors: {pot: *pot, board: *board_s, bowl: *bowl_x}
+CuttingboardToCardboardBox:
+  source: gr1_unified/PosttrainPnPNovelFromCuttingboardToCardboardboxSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: box
+  from: board
+  anchors: {box: *box, board: *board_s, bowl: *bowl_x}
+PlacematToBowl:
+  source: gr1_unified/PosttrainPnPNovelFromPlacematToBowlSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: bowl
+  from: mat
+  anchors: {bowl: *bowl, mat: *mat_s, board: *board_x}
+PlacematToPlate:
+  source: gr1_unified/PosttrainPnPNovelFromPlacematToPlateSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: plate
+  from: mat
+  anchors: {plate: *plate_t, mat: *mat_s, bowl: *bowl_x}
+PlateToBowl:
+  source: gr1_unified/PosttrainPnPNovelFromPlateToBowlSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: bowl
+  from: plate
+  anchors: {bowl: *bowl, plate: *plate_s, board: *board_x}
+PlateToPan:
+  source: gr1_unified/PosttrainPnPNovelFromPlateToPanSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: pan
+  from: plate
+  anchors: {pan: *pan, plate: *plate_s, bowl: *bowl_x}
+PlateToPlate:
+  source: gr1_unified/PosttrainPnPNovelFromPlateToPlateSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: plate
+  from: dish
+  anchors: {plate: *plate_t, dish: *dish, bowl: *bowl_x}
+PlateToCardboardBox:
+  source: gr1_unified/PosttrainPnPNovelFromPlateToCardboardboxSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: box
+  from: plate
+  anchors: {box: *box, plate: *plate_s, bowl: *bowl_x}
+TrayToPlate:
+  source: gr1_unified/PosttrainPnPNovelFromTrayToPlateSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: plate
+  from: tray
+  anchors: {plate: *plate_t, tray: *tray_s, bowl: *bowl_x}
+TrayToPot:
+  source: gr1_unified/PosttrainPnPNovelFromTrayToPotSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: pot
+  from: tray
+  anchors: {pot: *pot, tray: *tray_s, bowl: *bowl_x}
+TrayToCardboardBox:
+  source: gr1_unified/PosttrainPnPNovelFromTrayToCardboardboxSplitA_GR1ArmsAndWaistFourierHands_Env
+  candidate: *can_c
+  main: box
+  from: tray
+  anchors: {box: *box, tray: *tray_s, bowl: *bowl_x}

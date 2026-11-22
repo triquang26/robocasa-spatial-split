@@ -1,0 +1,56 @@
+# Sub-factor settings per level, after SpatialLIBERO Table 3. Gaps are target-anchor distances (m): axis gap for
+# directional references, footprint gap for nearest_to / next_to, the smaller gap to either anchor for between.
+# Pools A (train, easy) and B (medium, hard) are in pools.yaml.
+base_gap: [0.005, 0.05]          # base scenes (training regime of the clean task)
+next_to_radius: {train: 0.05, easy: 0.0725, medium: 0.10, hard: 0.13}
+
+levels:
+  train:
+    gap_near: [0.005, 0.04]
+    gap_far: [0.04, 0.08]
+    light: [[0.8, 1.25]]
+    styles: A
+    clutter: {n: [1, 2], pool: A}
+    synonym: A
+    flip: [rel_swap, ref_inverse]
+    extra_cans: [0, 1]
+    anchor_move: train_rule
+  easy:
+    gap_near: [0.05, 0.065]
+    gap_far: [0.08, 0.10]
+    light: [[0.7, 0.8], [1.25, 1.4]]
+    styles: A
+    clutter: {n: [3, 3], pool: A}
+    synonym: A_unseen
+    flip: [rel_swap, ref_inverse]
+    extra_cans: [1, 1]
+    anchor_move: train_rule
+  medium:
+    gap_near: [0.08, 0.12]
+    gap_far: [0.12, 0.16]
+    light: [[0.35, 0.55], [1.5, 1.7]]
+    styles: AB
+    clutter: {n: [4, 5], pool: AB}
+    synonym: B
+    flip: [rel_swap, ref_inverse, goal_change]
+    flip_wording: {plain: B, goal: canon}
+    extra_cans: [2, 2]
+    anchor_move: any
+  hard:
+    gap_near: [0.12, 0.16]
+    gap_far: [0.16, 0.20]
+    light: [[0.27, 0.35], [1.7, 1.95]]
+    styles: B
+    clutter: {n: [5, 6], pool: B}
+    synonym: B
+    flip: [rel_swap, ref_inverse, goal_change]
+    flip_wording: {plain: B, goal: B}
+    extra_cans: [2, 2]
+    anchor_move: {min_disp: 0.14}
+
+# The four dimensions and their sub-factors. preserves_target: the answer stays the same bowl / can.
+dimensions:
+  VSR: {background: {preserves_target: true}, clutter: {preserves_target: true}}
+  SSU: {synonym: {preserves_target: true}, flip: {preserves_target: false}}
+  OCD: {gap_near: {preserves_target: true}, gap_far: {preserves_target: true}}
+  SCR: {extra_can: {preserves_target: true}, anchor_move: {preserves_target: false}}

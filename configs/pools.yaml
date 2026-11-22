@@ -1,0 +1,27 @@
+# Value pools. A: training and easy. B: unseen, medium and hard.
+styles:                 # RoboCasa tabletop style ids (counter, wall, floor textures)
+  A: [0, 1, 2, 3, 4, 5]
+  B: [6, 7, 8, 9, 10, 11]
+clutter:                # unnamed objects: never a candidate (can) or an anchor (plate, bowl, cutting board)
+  A: [apple, lemon, orange, banana, carrot]
+  B: [mug, cup, potato, onion, bell_pepper, cucumber]
+
+lexicon:
+  noun: {A: [can], B: [can, soda can]}
+  verb: {A: ["pick up the {obj} {ref} and place it {goal}"],
+         B: ["grab the {obj} {ref} and put it {goal}", "take the {obj} {ref} and set it {goal}"]}
+  reference:
+    left_of:     {canon: "to the left of the {a}", A: ["on the left side of the {a}", "left of the {a}"], B: ["to the {a}'s left", "at the left of the {a}"]}
+    right_of:    {canon: "to the right of the {a}", A: ["on the right side of the {a}", "right of the {a}"], B: ["to the {a}'s right", "at the right of the {a}"]}
+    in_front_of: {canon: "in front of the {a}", A: ["just in front of the {a}", "before the {a}"], B: ["between me and the {a}", "on the near side of the {a}"]}
+    behind:      {canon: "behind the {a}", A: ["in back of the {a}", "just behind the {a}"], B: ["on the far side of the {a}", "beyond the {a}"]}
+    nearest_to:  {canon: "closest to the {a}", A: ["nearest to the {a}", "nearest the {a}"], B: ["with the shortest distance to the {a}", "that is the closest one to the {a}"]}
+    next_to:     {canon: "next to the {a}", A: ["beside the {a}", "by the {a}"], B: ["right by the {a}", "adjacent to the {a}"]}
+    between:     {canon: "between the {a} and the {b}", A: ["in between the {a} and the {b}", "located between the {a} and the {b}"], B: ["in the middle of the {a} and the {b}", "halfway between the {a} and the {b}"]}
+    on_top_of:   {canon: "{on} the {a}", A: ["sitting {on} the {a}", "that is {on} the {a}"], B: ["resting {on} the {a}", "placed {on} the {a}"]}
+  goal:
+    left_of:     {canon: "to the left of the {a}", A: ["on the left side of the {a}"], B: ["to the {a}'s left"]}
+    right_of:    {canon: "to the right of the {a}", A: ["on the right side of the {a}"], B: ["to the {a}'s right"]}
+    in_front_of: {canon: "in front of the {a}", A: ["just in front of the {a}"], B: ["on the near side of the {a}"]}
+    behind:      {canon: "behind the {a}", A: ["in back of the {a}"], B: ["on the far side of the {a}"]}
+    on_top_of:   {canon: "{on} the {a}", A: ["onto the {a}"], B: ["down {on} the {a}"]}

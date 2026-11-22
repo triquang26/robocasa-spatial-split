@@ -1,0 +1,8 @@
+.venv/
+robocasa-gr1/
+out/
+res/
+SpatialCasa-GR1/
+__pycache__/
+*.pyc
+*.log
